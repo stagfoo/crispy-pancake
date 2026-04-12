@@ -106,9 +106,20 @@
         const patternColor = document.getElementById('color-pattern').value;
 
         // Get current selections
-        const layers = ['body', 'pattern', 'feet', 'face', 'arm', 'horn'];
+        const layers = ['body', 'pattern', 'outline', 'feet', 'face', 'arm', 'horn'];
         
         for (const layer of layers) {
+            let img;
+            if (layer === 'outline') {
+                const bodyPath = document.getElementById('sel-body').value;
+                if (!bodyPath) continue;
+                img = await loadImage(bodyPath);
+                ctx.globalCompositeOperation = 'darken';
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'source-over';
+                continue;
+            }
+
             const path = document.getElementById(`sel-${layer}`).value;
             if (!path) continue;
 
