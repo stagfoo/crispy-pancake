@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Monster Part Tester</title>
+    <style>
+        body { font-family: sans-serif; background: #222; color: white; display: flex; flex-direction: column; align-items: center; }
+        .container { display: flex; gap: 20px; padding: 20px; }
+        canvas { background: #fff; border: 2px solid #555; image-rendering: pixelated; width: 128px; height: 128px; }
+        .controls { display: flex; flex-direction: column; gap: 10px; min-width: 200px; }
+        select { padding: 8px; border-radius: 4px; background: #444; color: white; border: 1px solid #666; }
+        button { padding: 10px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; }
+        h3 { margin-bottom: 5px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+    <h1>Monster Layer Tester</h1>
+
+    <div class="container">
+        <div class="controls" id="ui-controls">
+            <h3>MAIN COLOR</h3>
+            <input type="color" id="color-general" value="#ffffff" onchange="render()">
+            <h3>PATTERN COLOR</h3>
+            <input type="color" id="color-pattern" value="#ffffff" onchange="render()">
+            <hr>
+            <button onclick="downloadSprite()">Download Sprite (.png)</button>
+        </div>
+
+        <canvas id="preview" width="128" height="128"></canvas>
+        <br>
+        <p> I should turn this into an api endpoint so I can call the sprite from the game easily, then either interate over it locally or memornize it on the cloud and keep it in the game, with keeps this messy logic out of the game, i could actually bundle the api with the game and call it locally too
+    </div>
+
+<script>
+    // 1. LIST YOUR FILES HERE
+    // Change these strings to match your actual filenames in your folders
+    const assetManifest = {
+        body: ['01.png'],
+        pattern: ['none', '01.png'],
+        feet: ['01.png', '02.png'],
+        face: ['01.png'],
+        arm: ['none', '01.png'],
+        horn: ['none']
+    };
+
+    const canvas = document.getElementById('preview');
+    const ctx = canvas.getContext('2d');
+    const images = {}; // Cache for loaded Image objects
+
+    const offscreen = document.createElement('canvas');
+    const offCtx = offscreen.getContext('2d');
+
+    // 2. Initialize UI
+    function init() {
+        const container = document.getElementById('ui-controls');
+        // Clear initial content if any, or just append
+        Object.keys(assetManifest).reverse().forEach(layer => {
+            const label = document.createElement('h3');
+            label.innerText = layer.toUpperCase();
+            const select = document.createElement('select');
+            select.id = `sel-${layer}`;
+            
+            assetManifest[layer].forEach(file => {
+                const opt = document.createElement('option');
+                opt.value = file === 'none' ? '' : `${layer}/${file}`;
+                opt.innerText = file;
+                select.appendChild(opt);
+            });
+
+            select.onchange = render;
+            container.prepend(select);
+            container.prepend(label);
+        });
+        render();
+    }
+
+    function applyColor(img, hexColor) {
+        offscreen.width = img.width;
+        offscreen.height = img.height;
+        offCtx.clearRect(0, 0, offscreen.width, offscreen.height);
+        
+        // 1. Draw the base image
+        offCtx.drawImage(img, 0, 0);
+        
+        // 2. Use 'multiply' to color white pixels while keeping black ones
+        offCtx.globalCompositeOperation = 'multiply';
+        offCtx.fillStyle = hexColor;
+        offCtx.fillRect(0, 0, offscreen.width, offscreen.height);
+        
+        // 3. Use 'destination-in' to restore the original transparency mask
+        offCtx.globalCompositeOperation = 'destination-in';
+        offCtx.drawImage(img, 0, 0);
+        
+        // 4. Reset composite operation for future calls
+        offCtx.globalCompositeOperation = 'source-over';
+        
+        return offscreen;
+    }
+
+    // 3. The Core Layering & Masking Logic
+    async function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const generalColor = document.getElementById('color-general').value;
+        const patternColor = document.getElementById('color-pattern').value;
+
+        // Get current selections
+        const layers = ['body', 'pattern', 'feet', 'face', 'arm', 'horn'];
+        
+        for (const layer of layers) {
+            const path = document.getElementById(`sel-${layer}`).value;
+            if (!path) continue;
+
+            const originalImg = await loadImage(path);
+            const targetColor = (layer === 'pattern') ? patternColor : generalColor;
+            const coloredImg = applyColor(originalImg, targetColor);
+
+            if (layer === 'pattern') {
+                // --- THE MASKING TRICK ---
+                ctx.globalCompositeOperation = 'source-atop';
+                ctx.drawImage(coloredImg, 0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'source-over'; // Reset
+            } else {
+                // Standard Layering
+                ctx.drawImage(coloredImg, 0, 0, canvas.width, canvas.height);
+            }
+        }
+    }
+
+    // Helper to load images and cache them
+    function loadImage(src) {
+        if (images[src]) return Promise.resolve(images[src]);
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => {
+                images[src] = img;
+                resolve(img);
+            };
+            img.src = src; 
+        });
+    }
+
+    function downloadSprite() {
+        const link = document.createElement('a');
+        link.download = 'my-monster.png';
+        link.href = canvas.toDataURL();
+        link.click();
+    }
+
+    init();
+</script>
+</body>
+</html>
