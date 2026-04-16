@@ -4,13 +4,22 @@
     <meta charset="UTF-8">
     <title>Monster Part Tester</title>
     <style>
-        body { font-family: sans-serif; background: #222; color: white; display: flex; flex-direction: column; align-items: center; }
-        .container { display: flex; gap: 20px; padding: 20px; }
-        canvas { background: #fff; border: 2px solid #555; image-rendering: pixelated; width: 128px; height: 128px; }
-        .controls { display: flex; flex-direction: column; gap: 10px; min-width: 200px; }
-        select { padding: 8px; border-radius: 4px; background: #444; color: white; border: 1px solid #666; }
-        button { padding: 10px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; }
-        h3 { margin-bottom: 5px; color: #aaa; }
+        body { font-family: sans-serif; background: #222; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { display: flex; flex-direction: column; align-items: center; gap: 20px; max-width: 800px; width: 100%; }
+        
+        canvas { background: #fff; border: 4px solid #555; image-rendering: pixelated; width: 256px; height: 256px; }
+        
+        .controls-top { display: flex; gap: 20px; background: #333; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+        .color-group { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        
+        .parts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; width: 100%; background: #333; padding: 20px; border-radius: 8px; }
+        .part-control { display: flex; flex-direction: column; gap: 5px; }
+        
+        select { padding: 8px; border-radius: 4px; background: #444; color: white; border: 1px solid #666; width: 100%; }
+        button { padding: 12px 24px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold; }
+        h3 { margin: 0; font-size: 0.9rem; color: #aaa; text-transform: uppercase; }
+        
+        .footer-note { margin-top: 40px; color: #666; font-style: italic; max-width: 600px; text-align: center; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -18,23 +27,36 @@
     <h1>Monster Layer Tester</h1>
 
     <div class="container">
-        <div class="controls" id="ui-controls">
-            <h3>MAIN COLOR</h3>
-            <input type="color" id="color-general" value="#ffffff" onchange="render()">
-            <h3>PATTERN COLOR</h3>
-            <input type="color" id="color-pattern" value="#ffffff" onchange="render()">
-            <hr>
-            <button onclick="downloadSprite()">Download Sprite (.png)</button>
+        <!-- Main Preview -->
+        <canvas id="preview" width="128" height="128"></canvas>
+
+        <!-- Top Controls (Colors & Download) -->
+        <div class="controls-top">
+            <div class="color-group">
+                <h3>Main Color</h3>
+                <input type="color" id="color-general" value="#ffffff" onchange="render()">
+            </div>
+            <div class="color-group">
+                <h3>Pattern Color</h3>
+                <input type="color" id="color-pattern" value="#ffffff" onchange="render()">
+            </div>
+            <div style="display: flex; align-items: flex-end; margin-left: 20px;">
+                <button onclick="downloadSprite()">Download Sprite (.png)</button>
+            </div>
         </div>
 
-        <canvas id="preview" width="128" height="128"></canvas>
-        <br>
-        <p> I should turn this into an api endpoint so I can call the sprite from the game easily, then either interate over it locally or memornize it on the cloud and keep it in the game, with keeps this messy logic out of the game, i could actually bundle the api with the game and call it locally too
+        <!-- Part Selectors Grid -->
+        <div class="parts-grid" id="ui-controls">
+            <!-- Dynamically populated -->
+        </div>
+
+        <p class="footer-note">
+            I should turn this into an api endpoint so I can call the sprite from the game easily, then either interate over it locally or memornize it on the cloud and keep it in the game, with keeps this messy logic out of the game, i could actually bundle the api with the game and call it locally too
+        </p>
     </div>
 
 <script>
     // 1. LIST YOUR FILES HERE
-    // Change these strings to match your actual filenames in your folders
     const assetManifest = {
         body: ['01.png'],
         pattern: ['none', '01.png'],
@@ -54,10 +76,14 @@
     // 2. Initialize UI
     function init() {
         const container = document.getElementById('ui-controls');
-        // Clear initial content if any, or just append
-        Object.keys(assetManifest).reverse().forEach(layer => {
+        
+        Object.keys(assetManifest).forEach(layer => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'part-control';
+            
             const label = document.createElement('h3');
-            label.innerText = layer.toUpperCase();
+            label.innerText = layer;
+            
             const select = document.createElement('select');
             select.id = `sel-${layer}`;
             
@@ -69,8 +95,9 @@
             });
 
             select.onchange = render;
-            container.prepend(select);
-            container.prepend(label);
+            wrapper.appendChild(label);
+            wrapper.appendChild(select);
+            container.appendChild(wrapper);
         });
         render();
     }
@@ -80,19 +107,15 @@
         offscreen.height = img.height;
         offCtx.clearRect(0, 0, offscreen.width, offscreen.height);
         
-        // 1. Draw the base image
         offCtx.drawImage(img, 0, 0);
         
-        // 2. Use 'multiply' to color white pixels while keeping black ones
         offCtx.globalCompositeOperation = 'multiply';
         offCtx.fillStyle = hexColor;
         offCtx.fillRect(0, 0, offscreen.width, offscreen.height);
         
-        // 3. Use 'destination-in' to restore the original transparency mask
         offCtx.globalCompositeOperation = 'destination-in';
         offCtx.drawImage(img, 0, 0);
         
-        // 4. Reset composite operation for future calls
         offCtx.globalCompositeOperation = 'source-over';
         
         return offscreen;
@@ -105,7 +128,6 @@
         const generalColor = document.getElementById('color-general').value;
         const patternColor = document.getElementById('color-pattern').value;
 
-        // Get current selections
         const layers = ['body', 'pattern', 'outline', 'feet', 'face', 'arm', 'horn'];
         
         for (const layer of layers) {
@@ -128,18 +150,15 @@
             const coloredImg = applyColor(originalImg, targetColor);
 
             if (layer === 'pattern') {
-                // --- THE MASKING TRICK ---
                 ctx.globalCompositeOperation = 'source-atop';
                 ctx.drawImage(coloredImg, 0, 0, canvas.width, canvas.height);
-                ctx.globalCompositeOperation = 'source-over'; // Reset
+                ctx.globalCompositeOperation = 'source-over';
             } else {
-                // Standard Layering
                 ctx.drawImage(coloredImg, 0, 0, canvas.width, canvas.height);
             }
         }
     }
 
-    // Helper to load images and cache them
     function loadImage(src) {
         if (images[src]) return Promise.resolve(images[src]);
         return new Promise(resolve => {
