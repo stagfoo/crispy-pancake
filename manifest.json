@@ -1,0 +1,38 @@
+{
+  "body": [
+    "01.png",
+    "02.png",
+    "03.png"
+  ],
+  "pattern": [
+    "none",
+    "01.png",
+    "02.png",
+    "03.png"
+  ],
+  "feet": [
+    "01.png",
+    "02.png",
+    "03.png"
+  ],
+  "face": [
+    "01.png",
+    "02.png",
+    "03.png",
+    "04.png",
+    "05.png"
+  ],
+  "arm": [
+    "none",
+    "01.png",
+    "02.png",
+    "03.png"
+  ],
+  "horn": [
+    "none",
+    "01.png",
+    "02.png",
+    "03.png",
+    "04.png"
+  ]
+}

@@ -56,15 +56,8 @@
     </div>
 
 <script>
-    // 1. LIST YOUR FILES HERE
-    const assetManifest = {
-        body: ['01.png'],
-        pattern: ['none', '01.png'],
-        feet: ['01.png', '02.png'],
-        face: ['01.png'],
-        arm: ['none', '01.png'],
-        horn: ['none']
-    };
+    // 1. DATA SOURCE
+    let assetManifest = {};
 
     const canvas = document.getElementById('preview');
     const ctx = canvas.getContext('2d');
@@ -74,32 +67,40 @@
     const offCtx = offscreen.getContext('2d');
 
     // 2. Initialize UI
-    function init() {
-        const container = document.getElementById('ui-controls');
-        
-        Object.keys(assetManifest).forEach(layer => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'part-control';
+    async function init() {
+        try {
+            const response = await fetch('manifest.json');
+            assetManifest = await response.json();
             
-            const label = document.createElement('h3');
-            label.innerText = layer;
+            const container = document.getElementById('ui-controls');
+            container.innerHTML = ''; // Clear any existing
             
-            const select = document.createElement('select');
-            select.id = `sel-${layer}`;
-            
-            assetManifest[layer].forEach(file => {
-                const opt = document.createElement('option');
-                opt.value = file === 'none' ? '' : `${layer}/${file}`;
-                opt.innerText = file;
-                select.appendChild(opt);
-            });
+            Object.keys(assetManifest).forEach(layer => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'part-control';
+                
+                const label = document.createElement('h3');
+                label.innerText = layer;
+                
+                const select = document.createElement('select');
+                select.id = `sel-${layer}`;
+                
+                assetManifest[layer].forEach(file => {
+                    const opt = document.createElement('option');
+                    opt.value = file === 'none' ? '' : `${layer}/${file}`;
+                    opt.innerText = file;
+                    select.appendChild(opt);
+                });
 
-            select.onchange = render;
-            wrapper.appendChild(label);
-            wrapper.appendChild(select);
-            container.appendChild(wrapper);
-        });
-        render();
+                select.onchange = render;
+                wrapper.appendChild(label);
+                wrapper.appendChild(select);
+                container.appendChild(wrapper);
+            });
+            render();
+        } catch (e) {
+            console.error("Error loading manifest.json:", e);
+        }
     }
 
     function applyColor(img, hexColor) {
